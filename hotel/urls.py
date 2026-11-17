@@ -18,4 +18,7 @@ urlpatterns = [
         auth_views.LogoutView.as_view(next_page="home"),
         name="logout",
     ),
+    path("book/<int:room_id>/", views.book_room, name="book_room"),
+    path("my-reservations/", views.my_reservations, name="my_reservations"),
+    path("cancel/<int:reservation_id>/", views.cancel_reservation, name="cancel_reservation"),
 ]
