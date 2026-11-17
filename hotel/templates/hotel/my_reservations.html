@@ -1,0 +1,60 @@
+{% extends "hotel/base.html" %}
+
+{% block title %}My Reservations - HotelBooker{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3>My Reservations</h3>
+    <a href="{% url 'home' %}" class="btn btn-primary btn-sm">Book Another Room</a>
+</div>
+
+{% if reservations %}
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover bg-white shadow-sm align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>Room</th>
+                    <th>Type</th>
+                    <th>Check-in</th>
+                    <th>Check-out</th>
+                    <th>Price / Night</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for res in reservations %}
+                    <tr>
+                        <td class="fw-bold">Room {{ res.room.room_number }}</td>
+                        <td>{{ res.room.get_room_type_display }}</td>
+                        <td>{{ res.check_in }}</td>
+                        <td>{{ res.check_out }}</td>
+                        <td>€{{ res.room.price_per_night }}</td>
+                        <td>
+                            {% if res.status == "confirmed" %}
+                                <span class="badge bg-success">Confirmed</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Cancelled</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if res.status == "confirmed" %}
+                                <form method="post" action="{% url 'cancel_reservation' res.id %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-outline-danger btn-sm">Cancel</button>
+                                </form>
+                            {% else %}
+                                <span class="text-muted small">—</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% else %}
+    <div class="alert alert-info">
+        You have no reservations yet. <a href="{% url 'home' %}">Browse available rooms</a> to make your first booking!
+    </div>
+{% endif %}
+{% endblock %}
