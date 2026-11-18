@@ -1,10 +1,13 @@
+
 from django.contrib.auth import views as auth_views
 from django.urls import path
 from . import views
+from . import receptionist_views
 
 urlpatterns = [
     path("", views.home, name="home"),
     path("signup/", views.signup_view, name="signup"),
+
     path(
         "login/",
         auth_views.LoginView.as_view(
@@ -17,5 +20,17 @@ urlpatterns = [
         "logout/",
         auth_views.LogoutView.as_view(next_page="home"),
         name="logout",
+    ),
+
+    # Receptionist portal
+    path(
+        "receptionist/",
+        receptionist_views.receptionist_dashboard,
+        name="receptionist_dashboard",
+    ),
+    path(
+        "receptionist/reservation/<int:reservation_id>/edit/",
+        receptionist_views.edit_reservation,
+        name="edit_reservation",
     ),
 ]
