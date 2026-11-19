@@ -70,7 +70,7 @@ class ReceptionistTests(TestCase):
             username="customer",
             password="testpassword123"
         )
-
+#Demonstrate
         response = self.client.get(
             reverse("receptionist_dashboard")
         )
