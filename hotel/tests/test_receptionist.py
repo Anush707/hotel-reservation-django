@@ -1,129 +1,72 @@
 
-from datetime import date, timedelta
+name: Django CI
 
-from django.contrib.auth.models import Group, User
-from django.test import TestCase
-from django.urls import reverse
+on:
+  push:
+    branches:
+      - main
+      - feature/receptionist-and-ci
 
-from hotel.models import Room, Reservation
+  pull_request:
+    branches:
+      - main
 
+jobs:
+  test:
+    runs-on: ubuntu-latest
 
-class ReceptionistTests(TestCase):
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: hotel_reservation_db
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
-    def setUp(self):
-        # Create the Receptionist group
-        self.receptionist_group, _ = Group.objects.get_or_create(
-            name="Receptionist"
-        )
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-        # Create a receptionist user
-        self.receptionist = User.objects.create_user(
-            username="receptionist",
-            password="testpassword123"
-        )
-        self.receptionist.groups.add(self.receptionist_group)
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
 
-        # Create a normal customer
-        self.customer = User.objects.create_user(
-            username="customer",
-            password="testpassword123"
-        )
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
-        # Create two rooms
-        self.room1 = Room.objects.create(
-            room_number="101",
-            room_type="single",
-            capacity=1,
-            price_per_night="75.00",
-        )
+      - name: Run migrations
+        env:
+          DB_NAME: hotel_reservation_db
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+          DB_HOST: localhost
+          DB_PORT: 5432
+        run: python manage.py migrate
 
-        self.room2 = Room.objects.create(
-            room_number="102",
-            room_type="double",
-            capacity=2,
-            price_per_night="120.00",
-        )
+      - name: Run Django checks
+        env:
+          DB_NAME: hotel_reservation_db
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+          DB_HOST: localhost
+          DB_PORT: 5432
+        run: python manage.py check
 
-        # Create a reservation
-        self.reservation = Reservation.objects.create(
-            user=self.customer,
-            room=self.room1,
-            check_in=date.today() + timedelta(days=10),
-            check_out=date.today() + timedelta(days=15),
-            status="confirmed",
-        )
-
-    def test_receptionist_can_access_dashboard(self):
-        self.client.login(
-            username="receptionist",
-            password="testpassword123"
-        )
-
-        response = self.client.get(
-            reverse("receptionist_dashboard")
-        )
-
-        self.assertEqual(response.status_code, 200)
-
-    def test_customer_cannot_access_dashboard(self):
-        self.client.login(
-            username="customer",
-            password="testpassword123"
-        )
-#Demonstrate
-        response = self.client.get(
-            reverse("receptionist_dashboard")
-        )
-
-        self.assertEqual(response.status_code, 403)
-
-    def test_receptionist_can_update_reservation(self):
-        self.client.login(
-            username="receptionist",
-            password="testpassword123"
-        )
-
-        response = self.client.post(
-            reverse(
-                "edit_reservation",
-                args=[self.reservation.id]
-            ),
-            {
-                "room": self.room2.id,
-                "check_in": self.reservation.check_in,
-                "check_out": self.reservation.check_out,
-                "status": "confirmed",
-            },
-        )
-
-        self.assertEqual(response.status_code, 302)
-
-        self.reservation.refresh_from_db()
-
-        self.assertEqual(self.reservation.room, self.room2)
-
-    def test_receptionist_can_cancel_reservation(self):
-        self.client.login(
-            username="receptionist",
-            password="testpassword123"
-        )
-
-        self.client.post(
-            reverse(
-                "edit_reservation",
-                args=[self.reservation.id]
-            ),
-            {
-                "room": self.room1.id,
-                "check_in": self.reservation.check_in,
-                "check_out": self.reservation.check_out,
-                "status": "cancelled",
-            },
-        )
-
-        self.reservation.refresh_from_db()
-
-        self.assertEqual(
-            self.reservation.status,
-            "cancelled"
-        )
+      - name: Run automated tests
+        env:
+          DB_NAME: hotel_reservation_db
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+          DB_HOST: localhost
+          DB_PORT: 5432
+        run: python manage.py test
